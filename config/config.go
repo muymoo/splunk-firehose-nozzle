@@ -25,6 +25,7 @@ type config struct {
 
 	AddAppInfo  bool   `envconfig:"add_app_info" default:"false"`
 	ApiEndpoint string `envconfig:"api_endpoint" required:"true"`
+	ApiEndpointAlt string `envconfig:"api_endpoint_alt" required:"false"`
 	ApiUser     string `envconfig:"api_user" required:"true"`
 	ApiPassword string `envconfig:"api_password" required:"true"`
 	BoldDBPath  string `envconfig:"boltdb_path" default:"cache.db"`

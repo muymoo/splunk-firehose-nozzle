@@ -43,6 +43,34 @@ func main() {
 		logger.RegisterSink(sink.NewSplunkSink(c.JobName, c.JobIndex, c.JobHost, splunkCLient))
 	}
 
+	cfConfigAlt := &cfclient.Config{
+		ApiAddress:        c.ApiEndpointAlt,
+		Username:          c.ApiUser,
+		Password:          c.ApiPassword,
+		SkipSslValidation: c.SkipSSL,
+	}
+	cfClientAlt, err := cfclient.NewClient(cfConfigAlt)
+	if err != nil {
+		log.Fatal("Error setting up cf client: ", err)
+	}
+
+	logger.Info("Setting up caching")
+	var cache caching.Caching
+	if c.AddAppInfo {
+		cache = caching.NewCachingBolt(cfClientAlt, c.BoldDBPath)
+		cache.CreateBucket()
+		// //Let's Update the database the first time
+		// logging.LogStd("Start filling app/space/org cache.", true)
+		// apps := cache.GetAllApp()
+		// logging.LogStd(fmt.Sprintf("Done filling cache! Found [%d] Apps", len(apps)), true)
+
+		// //Let's start the goRoutine
+		// timeTicker, _ := time.ParseDuration("2h")
+		// cache.PerformPoollingCaching(timeTicker)
+	} else {
+		cache = caching.NewCachingEmpty()
+	}
+
 	logger.Info("Connecting to Cloud Foundry")
 	cfConfig := &cfclient.Config{
 		ApiAddress:        c.ApiEndpoint,
@@ -53,15 +81,6 @@ func main() {
 	cfClient, err := cfclient.NewClient(cfConfig)
 	if err != nil {
 		log.Fatal("Error setting up cf client: ", err)
-	}
-
-	logger.Info("Setting up caching")
-	var cache caching.Caching
-	if c.AddAppInfo {
-		cache = caching.NewCachingBolt(cfClient, c.BoldDBPath)
-		cache.CreateBucket()
-	} else {
-		cache = caching.NewCachingEmpty()
 	}
 
 	logger.Info("Setting up event routing")
@@ -92,4 +111,6 @@ func main() {
 	} else {
 		logger.Fatal("Failed connecting to Splunk", errors.New(""))
 	}
+
+	defer cache.Close()
 }

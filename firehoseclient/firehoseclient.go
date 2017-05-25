@@ -63,23 +63,29 @@ func (f *FirehoseNozzle) routeEvent() error {
 			f.eventRouting.RouteEvent(envelope)
 		case err := <-f.errs:
 			f.handleError(err)
-			return err
+			continue
+			//return err
 		}
 	}
 }
 
 func (f *FirehoseNozzle) handleError(err error) {
-	switch {
-	case websocket.IsCloseError(err, websocket.CloseNormalClosure):
-		logging.LogError("Normal Websocket Closure: %v", err)
-	case websocket.IsCloseError(err, websocket.ClosePolicyViolation):
-		logging.LogError("Error while reading from the firehose: %v", err)
-		logging.LogError("Disconnected because nozzle couldn't keep up. Please try scaling up the nozzle.", nil)
 
-	default:
-		logging.LogError("Error while reading from the firehose: %v", err)
-	}
+	switch closeErr := err.(type) {
+        case *websocket.CloseError:
+                switch closeErr.Code {
+                	case websocket.CloseNormalClosure:
+                	// no op
+               	 	case websocket.ClosePolicyViolation:
+						logging.LogError("Error while reading from the firehose: %v", err)
+						logging.LogError("Disconnected because nozzle couldn't keep up. Please try scaling up the nozzle.", nil)
+                default:
+                        logging.LogError("Error while reading from the firehose: %v", err)
+                }
+        default:
+			logging.LogError("Error while reading from the firehose: %v", err)
+    }
 
 	logging.LogError("Closing connection with traffic controller due to %v", err)
-	f.consumer.Close()
+	//f.consumer.Close()
 }
