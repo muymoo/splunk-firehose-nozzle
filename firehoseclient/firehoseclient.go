@@ -18,6 +18,8 @@ type FirehoseNozzle struct {
 	eventRouting   *eventRouting.EventRouting
 	config         *FirehoseConfig
 	tokenRefresher consumer.TokenRefresher
+	limiter		   <-chan time.Time
+
 }
 
 type FirehoseConfig struct {
@@ -34,6 +36,7 @@ func NewFirehoseNozzle(tokenRefresher consumer.TokenRefresher, eventRouting *eve
 		eventRouting:   eventRouting,
 		config:         firehoseconfig,
 		tokenRefresher: tokenRefresher,
+		limiter:		time.Tick(time.Second * 5),
 	}
 }
 
@@ -64,7 +67,6 @@ func (f *FirehoseNozzle) routeEvent() error {
 		case err := <-f.errs:
 			f.handleError(err)
 			continue
-			//return err
 		}
 	}
 }
@@ -79,13 +81,15 @@ func (f *FirehoseNozzle) handleError(err error) {
                	 	case websocket.ClosePolicyViolation:
 						logging.LogError("Error while reading from the firehose: %v", err)
 						logging.LogError("Disconnected because nozzle couldn't keep up. Please try scaling up the nozzle.", nil)
-                default:
-                        logging.LogError("Error while reading from the firehose: %v", err)
+	                default:
+	                	// Rate limit error logging
+	                	<-f.limiter
+	                    logging.LogError("Error while reading from the firehose: %v", err)
                 }
         default:
+        	<-f.limiter
 			logging.LogError("Error while reading from the firehose: %v", err)
     }
-
-	logging.LogError("Closing connection with traffic controller due to %v", err)
-	//f.consumer.Close()
+    <-f.limiter
+	logging.LogError("Attempting to reconnect to traffic controller %v", err)
 }

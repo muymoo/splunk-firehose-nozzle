@@ -59,14 +59,6 @@ func main() {
 	if c.AddAppInfo {
 		cache = caching.NewCachingBolt(cfClientAlt, c.BoldDBPath)
 		cache.CreateBucket()
-		// //Let's Update the database the first time
-		// logging.LogStd("Start filling app/space/org cache.", true)
-		// apps := cache.GetAllApp()
-		// logging.LogStd(fmt.Sprintf("Done filling cache! Found [%d] Apps", len(apps)), true)
-
-		// //Let's start the goRoutine
-		// timeTicker, _ := time.ParseDuration("2h")
-		// cache.PerformPoollingCaching(timeTicker)
 	} else {
 		cache = caching.NewCachingEmpty()
 	}
