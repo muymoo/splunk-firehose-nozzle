@@ -1,5 +1,5 @@
-hash: b73f9c70d8ed16c246af32b7e66fc6306474625614525e21ca355fe7d6b4891c
-updated: 2016-11-02T08:56:04.177492413-07:00
+hash: 21b05710645133bf21c6a8299fe014a289c9d87b725129757d3e6800f8bc5cb4
+updated: 2017-06-16T14:30:38.795551271-07:00
 imports:
 - name: code.cloudfoundry.org/cfhttp
   version: 1d363866d79a7203ee22ee605a9ac6081b56c9a0
@@ -72,6 +72,10 @@ imports:
   version: 2baa8a1b9338cf13d9eeb27696d761155fa480be
   subpackages:
   - internal
+- name: golang.org/x/sync
+  version: f52d1811a62927559de87708c8913c1650ce4f26
+  subpackages:
+  - syncmap
 - name: golang.org/x/sys
   version: 9d4e42a20653790449273b3c85e67d6d8bae6e2e
   subpackages:

@@ -11,3 +11,4 @@ import:
   subpackages:
   - events
 - package: github.com/kelseyhightower/envconfig
+- package: golang.org/x/sync/syncmap

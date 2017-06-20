@@ -9,11 +9,13 @@ import (
 	"log"
 	"os"
 	"time"
+	"golang.org/x/sync/syncmap"
 )
 
 type CachingBolt struct {
 	GcfClient *cfClient.Client
 	Appdb     *bolt.DB
+	missed	  *syncmap.Map
 }
 
 func NewCachingBolt(gcfClientSet *cfClient.Client, boltDatabasePath string) Caching {
@@ -26,10 +28,21 @@ func NewCachingBolt(gcfClientSet *cfClient.Client, boltDatabasePath string) Cach
 
 	}
 
-	return &CachingBolt{
+	cachingBolt := &CachingBolt{
 		GcfClient: gcfClientSet,
 		Appdb:     db,
+		missed:    new(syncmap.Map),
 	}
+
+	ticker := time.Tick(1 * time.Hour)
+
+	go func() {
+		for range ticker {
+			cachingBolt.missed = new(syncmap.Map)
+		}
+	}()
+
+	return cachingBolt
 }
 
 func (c *CachingBolt) CreateBucket() {
@@ -41,7 +54,6 @@ func (c *CachingBolt) CreateBucket() {
 		return nil
 
 	})
-
 }
 
 func (c *CachingBolt) PerformPoollingCaching(tickerTime time.Duration) {
@@ -143,10 +155,24 @@ func (c *CachingBolt) Close() {
 }
 
 func (c *CachingBolt) GetAppInfoCache(appGuid string) App {
+
+	// App exists in cache
 	if app := c.GetAppInfo(appGuid); app.Name != "" {
 		return app
-	} else {
-		c.GetAppByGuid(appGuid)
 	}
-	return c.GetAppInfo(appGuid)
+
+	// App already missed, ignore
+	if _, found := c.missed.Load(appGuid); found {
+		return App{}
+	}
+
+	// First time seeing app
+	apps:=c.GetAppByGuid(appGuid)
+	if apps[0].Name == ""{
+
+		// Remember not to look up this app again
+		c.missed.Store(appGuid,0)
+		return App{}
+	}
+	return apps[0]
 }
