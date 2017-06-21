@@ -40,6 +40,8 @@ var (
 			OverrideDefaultFromEnvar("ADD_APP_INFO").Default("false").Bool()
 	apiEndpoint = kingpin.Flag("api-endpoint", "API endpoint address").
 			OverrideDefaultFromEnvar("API_ENDPOINT").Required().String()
+	apiEndpointAlt = kingpin.Flag("api-endpoint-alt", "Alternative API endpoint address").
+			OverrideDefaultFromEnvar("API_ENDPOINT_ALT").Required().String()
 	user = kingpin.Flag("user", "Admin user.").
 		OverrideDefaultFromEnvar("API_USER").Required().String()
 	password = kingpin.Flag("password", "Admin password.").
@@ -118,6 +120,28 @@ func main() {
 	}
 
 	logger.Info("Connecting to Cloud Foundry. splunk-firehose-nozzle runs", versionInfo)
+	cfConfigAlt := &cfclient.Config{
+		ApiAddress:        *apiEndpointAlt,
+		Username:          *user,
+		Password:          *password,
+		SkipSslValidation: *skipSSL,
+	}
+	cfClientAlt, err := cfclient.NewClient(cfConfigAlt)
+	if err != nil {
+		logger.Fatal("Error setting up cf client: ", err)
+	}
+
+	logger.Info("Setting up caching")
+	var cache caching.Caching
+
+	if *addAppInfo {
+		cache = caching.NewCachingBolt(cfClientAlt, *boltDBPath)
+		cache.CreateBucket()
+	} else {
+		cache = caching.NewCachingEmpty()
+	}
+
+	logger.Info("Connecting to Cloud Foundry")
 	cfConfig := &cfclient.Config{
 		ApiAddress:        *apiEndpoint,
 		Username:          *user,
@@ -127,15 +151,6 @@ func main() {
 	cfClient, err := cfclient.NewClient(cfConfig)
 	if err != nil {
 		logger.Fatal("Error setting up cf client: ", err)
-	}
-
-	logger.Info("Setting up caching")
-	var cache caching.Caching
-	if *addAppInfo {
-		cache = caching.NewCachingBolt(cfClient, *boltDBPath)
-		cache.CreateBucket()
-	} else {
-		cache = caching.NewCachingEmpty()
 	}
 
 	logger.Info("Setting up event routing")
@@ -170,4 +185,6 @@ func main() {
 	} else {
 		logger.Fatal("Failed connecting to Splunk", errors.New(""))
 	}
+
+	defer cache.Close()
 }
