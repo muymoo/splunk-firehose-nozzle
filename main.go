@@ -32,46 +32,50 @@ var (
 	jobName = kingpin.Flag("job-name", "Job name to tag nozzle's own log events").
 		OverrideDefaultFromEnvar("JOB_NAME").Default("splunk-nozzle").String()
 	jobIndex = kingpin.Flag("job-index", "Job index to tag nozzle's own log events").
-			OverrideDefaultFromEnvar("JOB_INDEX").Default("-1").String()
+		OverrideDefaultFromEnvar("JOB_INDEX").Default("-1").String()
 	jobHost = kingpin.Flag("job-host", "Job host to tag nozzle's own log events").
 		OverrideDefaultFromEnvar("JOB_HOST").Default("localhost").String()
 
 	addAppInfo = kingpin.Flag("add-app-info", "Query API to fetch app details").
-			OverrideDefaultFromEnvar("ADD_APP_INFO").Default("false").Bool()
+		OverrideDefaultFromEnvar("ADD_APP_INFO").Default("false").Bool()
 	apiEndpoint = kingpin.Flag("api-endpoint", "API endpoint address").
-			OverrideDefaultFromEnvar("API_ENDPOINT").Required().String()
+		OverrideDefaultFromEnvar("API_ENDPOINT").Required().String()
 	apiEndpointAlt = kingpin.Flag("api-endpoint-alt", "Alternative API endpoint address").
-			OverrideDefaultFromEnvar("API_ENDPOINT_ALT").Required().String()
+		OverrideDefaultFromEnvar("API_ENDPOINT_ALT").Required().String()
 	user = kingpin.Flag("user", "Admin user.").
 		OverrideDefaultFromEnvar("API_USER").Required().String()
 	password = kingpin.Flag("password", "Admin password.").
-			OverrideDefaultFromEnvar("API_PASSWORD").Required().String()
+		OverrideDefaultFromEnvar("API_PASSWORD").Required().String()
 	boltDBPath = kingpin.Flag("boltdb-path", "Bolt Database path ").
-			Default("cache.db").OverrideDefaultFromEnvar("BOLTDB_PATH").String()
+		Default("cache.db").OverrideDefaultFromEnvar("BOLTDB_PATH").String()
 
 	wantedEvents = kingpin.Flag("events", fmt.Sprintf("Comma separated list of events you would like. Valid options are %s", eventRouting.GetListAuthorizedEventEvents())).
-			OverrideDefaultFromEnvar("EVENTS").Default("ValueMetric,CounterEvent,ContainerMetric").String()
+		OverrideDefaultFromEnvar("EVENTS").Default("ValueMetric,CounterEvent,ContainerMetric").String()
 	extraFields = kingpin.Flag("extra-fields", "Extra fields you want to annotate your events with, example: '--extra-fields=env:dev,something:other ").
-			OverrideDefaultFromEnvar("EXTRA_FIELDS").Default("").String()
+		OverrideDefaultFromEnvar("EXTRA_FIELDS").Default("").String()
 	keepAlive = kingpin.Flag("firehose-keep-alive", "Keep Alive duration for the firehose consumer").
-			OverrideDefaultFromEnvar("FIREHOSE_KEEP_ALIVE").Default("25s").Duration()
+		OverrideDefaultFromEnvar("FIREHOSE_KEEP_ALIVE").Default("25s").Duration()
 	subscriptionId = kingpin.Flag("subscription-id", "Id for the subscription.").
-			OverrideDefaultFromEnvar("FIREHOSE_SUBSCRIPTION_ID").Default("splunk-firehose").String()
+		OverrideDefaultFromEnvar("FIREHOSE_SUBSCRIPTION_ID").Default("splunk-firehose").String()
 
 	splunkToken = kingpin.Flag("splunk-token", "Splunk HTTP event collector token").
-			OverrideDefaultFromEnvar("SPLUNK_TOKEN").Required().String()
+		OverrideDefaultFromEnvar("SPLUNK_TOKEN").Required().String()
 	splunkHost = kingpin.Flag("splunk-host", "Splunk HTTP event collector host").
-			OverrideDefaultFromEnvar("SPLUNK_HOST").Required().String()
+		OverrideDefaultFromEnvar("SPLUNK_HOST").Required().String()
 	splunkIndex = kingpin.Flag("splunk-index", "Splunk index").
-			OverrideDefaultFromEnvar("SPLUNK_INDEX").Required().String()
+		OverrideDefaultFromEnvar("SPLUNK_INDEX").Required().String()
 	flushInterval = kingpin.Flag("flush-interval", "Every interval flushes to heavy forwarder every ").
-			OverrideDefaultFromEnvar("FLUSH_INTERVAL").Default("5s").Duration()
+		OverrideDefaultFromEnvar("FLUSH_INTERVAL").Default("5s").Duration()
 	queueSize = kingpin.Flag("consumer-queue-size", "Consumer queue buffer size").
-			OverrideDefaultFromEnvar("CONSUMER_QUEUE_SIZE").Default("10000").Int()
+		OverrideDefaultFromEnvar("CONSUMER_QUEUE_SIZE").Default("10000").Int()
 	batchSize = kingpin.Flag("hec-batch-size", "Batchsize of the events pushing to HEC  ").
-			OverrideDefaultFromEnvar("HEC_BATCH_SIZE").Default("1000").Int()
+		OverrideDefaultFromEnvar("HEC_BATCH_SIZE").Default("1000").Int()
 	retries = kingpin.Flag("hec-retries", "Number of retries before dropping events").
 		OverrideDefaultFromEnvar("HEC_RETRIES").Default("5").Int()
+	ignoreMissingApps = kingpin.Flag("ignore-missing-apps", "Enable throttling on cache lookup for missing apps").
+		Envar("IGNORE_MISSING_APPS").Default("false").Bool()
+	missingAppsTtl     = kingpin.Flag("missing-apps-ttl", "Ticker time for clearing missing apps bucket").
+		Envar("MISSING_APPS_TTL").Default("1h").Duration()
 )
 
 var (
@@ -135,7 +139,7 @@ func main() {
 	var cache caching.Caching
 
 	if *addAppInfo {
-		cache = caching.NewCachingBolt(cfClientAlt, *boltDBPath)
+		cache = caching.NewCachingBolt(cfClientAlt, *boltDBPath, *ignoreMissingApps, *missingAppsTtl)
 		cache.CreateBucket()
 	} else {
 		cache = caching.NewCachingEmpty()
