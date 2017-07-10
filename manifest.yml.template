@@ -4,7 +4,7 @@ applications:
   - name: splunk-firehose-nozzle
     memory: 64M
     instances: 2
-    buildpack: https://github.com/cloudfoundry/go-buildpack#v1.7.14
+    buildpack: https://github.com/cloudfoundry/go-buildpack#v1.8.5
     health-check-type: none
     no-route: true
     command: splunk-firehose-nozzle
